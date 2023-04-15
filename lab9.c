@@ -1,32 +1,37 @@
 #include <stdio.h>
+#include <stdlib.h>
 
-// RecordType
 struct RecordType {
     int id;
     char name;
     int order;
 };
 
-// Fill out this structure
-struct HashType {};
+struct Node {
+    struct RecordType record;
+    struct Node *next;
+};
 
-// Compute the hash function
-int hash(int x) {}
+struct HashType {
+    struct Node **array;
+    int size;
+};
 
-// parses input file to an integer array
-int parseData(char* inputFileName, struct RecordType** ppData) {
-    FILE* inFile = fopen(inputFileName, "r");
+int hash(int x, int hashSize) { return x % hashSize; }
+
+int parseData(char *inputFileName, struct RecordType **ppData) {
+    FILE *inFile = fopen(inputFileName, "r");
     int dataSz = 0;
     int i, n;
     char c;
-    struct RecordType* pRecord;
+    struct RecordType *pRecord;
     *ppData = NULL;
 
     if (inFile) {
         fscanf(inFile, "%d\n", &dataSz);
         *ppData =
-            (struct RecordType*)malloc(sizeof(struct RecordType) * dataSz);
-        // Implement parse data block
+            (struct RecordType *)malloc(sizeof(struct RecordType) * dataSz);
+
         if (*ppData == NULL) {
             printf("Cannot allocate memory\n");
             exit(-1);
@@ -47,7 +52,6 @@ int parseData(char* inputFileName, struct RecordType** ppData) {
     return dataSz;
 }
 
-// prints the records
 void printRecords(struct RecordType pData[], int dataSz) {
     int i;
     printf("\nRecords:\n");
@@ -57,23 +61,66 @@ void printRecords(struct RecordType pData[], int dataSz) {
     printf("\n\n");
 }
 
-// display records in the hash structure
-// skip the indices which are free
-// the output will be in the format:
-// index x -> id, name, order -> id, name, order ....
-void displayRecordsInHash(struct HashType* pHashArray, int hashSz) {
+void displayRecordsInHash(struct HashType *pHashArray, int hashSz) {
     int i;
+    struct Node *currentNode;
 
     for (i = 0; i < hashSz; ++i) {
-        // if index is occupied with any records, print all
+        currentNode = pHashArray->array[i];
+        if (currentNode != NULL) {
+            printf("Index %d ->", i);
+            while (currentNode != NULL) {
+                printf(" %d, %c, %d ->", currentNode->record.id,
+                       currentNode->record.name, currentNode->record.order);
+                currentNode = currentNode->next;
+            }
+            printf(" NULL\n");
+        }
+    }
+}
+
+struct HashType *createHash(int size) {
+    struct HashType *hashArray =
+        (struct HashType *)malloc(sizeof(struct HashType));
+    hashArray->array = (struct Node **)malloc(sizeof(struct Node *) * size);
+    for (int i = 0; i < size; ++i) {
+        hashArray->array[i] = NULL;
+    }
+    hashArray->size = size;
+    return hashArray;
+}
+
+void insertToHash(struct HashType *hashArray, struct RecordType *record) {
+    int index = hash(record->id, hashArray->size);
+    struct Node *newNode = (struct Node *)malloc(sizeof(struct Node));
+    newNode->record = *record;
+    newNode->next = NULL;
+
+    if (hashArray->array[index] == NULL) {
+        hashArray->array[index] = newNode;
+    } else {
+        struct Node *currentNode = hashArray->array[index];
+        while (currentNode->next != NULL) {
+            currentNode = currentNode->next;
+        }
+        currentNode->next = newNode;
     }
 }
 
 int main(void) {
-    struct RecordType* pRecords;
+    struct RecordType *pRecords;
     int recordSz = 0;
 
     recordSz = parseData("input.txt", &pRecords);
     printRecords(pRecords, recordSz);
-    // Your hash implementation
+
+    int hashSize = recordSz * 2;
+    struct HashType *hashArray = createHash(hashSize);
+    for (int i = 0; i < recordSz; ++i) {
+        insertToHash(hashArray, &pRecords[i]);
+    }
+
+    displayRecordsInHash(hashArray, hashSize);
+
+    return 0;
 }
